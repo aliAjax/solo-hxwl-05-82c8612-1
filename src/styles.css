@@ -18,7 +18,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -214,13 +215,118 @@ label {
   gap: 8px;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0 12px;
   color: #172033;
+  background: #ffffff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alert-banner {
+  border: 1px solid #fecdd3;
+  border-left: 6px solid #e11d48;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #9f1239;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.alert-banner strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.alert-banner ul {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 132px;
+  overflow: auto;
+  line-height: 1.8;
+}
+
+.chips button.filter-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.submit-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.form-error {
+  color: #be123c;
+  margin: 12px 0 0;
+}
+
+.record-card.alert {
+  border-color: #fda4af;
+  background: #fff5f6;
+}
+
+.record-card {
+  grid-template-columns: 56px 1fr auto;
+}
+
+.record-time {
+  margin-left: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.record-note {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.violation-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.violation-badge {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
+.delete-btn {
+  color: #be123c;
+  border-color: #fecdd3;
+  background: #ffffff;
+}
+
+.delete-btn:hover {
+  background: #fff1f2;
+}
+
+.empty-state {
+  color: #64748b;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
 }
 
 .record-list {
