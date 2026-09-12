@@ -267,6 +267,7 @@ button:disabled {
 .submit-row {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-top: 16px;
 }
 
@@ -320,6 +321,33 @@ button:disabled {
 
 .delete-btn:hover {
   background: #fff1f2;
+}
+
+.record-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.edit-btn {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, #dbe3ef);
+  background: #ffffff;
+}
+
+.edit-btn:hover {
+  background: color-mix(in srgb, var(--primary) 8%, #ffffff);
+}
+
+.cancel-btn {
+  color: #526070;
+  background: #ffffff;
+}
+
+.editing-hint {
+  margin: 8px 0 0;
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .empty-state {

@@ -110,6 +110,7 @@ function App() {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>(loadTrendMetricPref);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // 任何记录变动都写回浏览器本地存储，刷新后仍在
   useEffect(() => {
@@ -133,6 +134,7 @@ function App() {
   const metrics = useMemo(() => buildMetrics(filteredRecords), [filteredRecords]);
   const alerts = useMemo(() => collectViolations(filteredRecords), [filteredRecords]);
   const alertCount = alerts.reduce((sum, item) => sum + item.violations.length, 0);
+  const editingRecord = editingId ? records.find((r) => r.id === editingId) : undefined;
 
   function updateField(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -155,8 +157,7 @@ function App() {
       return;
     }
 
-    const record: TankRecord = {
-      id: createId(),
+    const fields = {
       tankType: form.tankType,
       temperature,
       ph,
@@ -164,16 +165,51 @@ function App() {
       nitrate,
       waterChange,
       note: form.note.trim(),
-      createdAt: new Date().toISOString(),
     };
-    setRecords((prev) => [record, ...prev]);
-    // 保留缸型，方便连续录入同一口缸
-    setForm({ ...emptyForm, tankType: form.tankType });
+
+    if (editingId) {
+      // 编辑：写回同一条记录，保留 id 和记录时间
+      setRecords((prev) => prev.map((r) => (r.id === editingId ? { ...r, ...fields } : r)));
+      setEditingId(null);
+      setForm(emptyForm);
+    } else {
+      const record: TankRecord = {
+        id: createId(),
+        ...fields,
+        createdAt: new Date().toISOString(),
+      };
+      setRecords((prev) => [record, ...prev]);
+      // 保留缸型，方便连续录入同一口缸
+      setForm({ ...emptyForm, tankType: form.tankType });
+    }
+    setFormError("");
+  }
+
+  function handleEdit(record: TankRecord) {
+    setForm({
+      tankType: record.tankType,
+      temperature: String(record.temperature),
+      ph: String(record.ph),
+      ammonia: String(record.ammonia),
+      nitrate: String(record.nitrate),
+      waterChange: String(record.waterChange),
+      note: record.note,
+    });
+    setEditingId(record.id);
+    setFormError("");
+    // jsdom 没有 scrollIntoView，可选调用避免报错
+    document.getElementById("record-form")?.scrollIntoView?.({ behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setForm(emptyForm);
+    setEditingId(null);
     setFormError("");
   }
 
   function handleDelete(id: string) {
     if (!window.confirm("确定删除这条记录吗？")) return;
+    if (id === editingId) handleCancelEdit();
     setRecords((prev) => prev.filter((r) => r.id !== id));
   }
 
@@ -282,10 +318,15 @@ function App() {
           <div className="section-heading">
             <div>
               <p>{project.domain}</p>
-              <h2>新增记录</h2>
+              <h2>{editingId ? "编辑记录" : "新增记录"}</h2>
+              {editingRecord && (
+                <p className="editing-hint">
+                  正在编辑：{editingRecord.tankType} · {formatTime(editingRecord.createdAt)}
+                </p>
+              )}
             </div>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form id="record-form" onSubmit={handleSubmit}>
             <div className="field-grid">
               <label>
                 <span>缸型</span>
@@ -380,8 +421,13 @@ function App() {
             </div>
             {formError && <p className="form-error">{formError}</p>}
             <div className="submit-row">
+              {editingId && (
+                <button type="button" className="cancel-btn" onClick={handleCancelEdit}>
+                  取消
+                </button>
+              )}
               <button type="submit" className="primary-action">
-                保存记录
+                {editingId ? "保存修改" : "保存记录"}
               </button>
             </div>
           </form>
@@ -430,9 +476,14 @@ function App() {
                     </div>
                   )}
                 </div>
-                <button className="delete-btn" onClick={() => handleDelete(record.id)}>
-                  删除
-                </button>
+                <div className="record-actions">
+                  <button className="edit-btn" onClick={() => handleEdit(record)}>
+                    编辑
+                  </button>
+                  <button className="delete-btn" onClick={() => handleDelete(record.id)}>
+                    删除
+                  </button>
+                </div>
               </article>
             );
           })}

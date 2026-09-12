@@ -69,6 +69,27 @@ function clickButton(text: string) {
   });
 }
 
+function clickCardButton(cardText: string, selector: string) {
+  const card = cards().find((c) => (c.textContent || "").includes(cardText));
+  if (!card) throw new Error(`找不到记录卡片：${cardText}`);
+  const btn = card.querySelector(selector)!;
+  act(() => {
+    btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+}
+
+function submitForm() {
+  const form = document.querySelector("form")!;
+  act(() => {
+    form.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+  });
+}
+
+const formInputs = () => Array.from(document.querySelectorAll("form input")) as HTMLInputElement[];
+const formSelect = () => document.querySelector("form select") as HTMLSelectElement;
+const submitButton = () =>
+  Array.from(document.querySelectorAll("form button")).find((b) => b.getAttribute("type") === "submit")!;
+
 async function main() {
   const container = document.getElementById("root")!;
   let root: Root = createRoot(container);
@@ -205,6 +226,98 @@ async function main() {
   });
   check("删除后列表减 1", cards().length === before - 1);
   check("localStorage 同步减 1", storedRecords().length === before - 1);
+
+  console.log("\n[12] 编辑记录并保存");
+  const editTarget = storedRecords().find((r) => r.note === "测试新增")!;
+  clickCardButton("测试新增", ".edit-btn");
+  check("进入编辑模式", bodyText().includes("编辑记录"));
+  check("提交按钮变为保存修改", submitButton().textContent === "保存修改");
+  check("出现取消按钮", Array.from(document.querySelectorAll("form button")).some((b) => b.textContent === "取消"));
+  check("提示正在编辑的记录", bodyText().includes("正在编辑：海缸"));
+  check(
+    "表单回填缸型和各项指标",
+    formSelect().value === "海缸" &&
+      formInputs()[0].value === "26" &&
+      formInputs()[1].value === "8.2" &&
+      formInputs()[2].value === "0.01" &&
+      formInputs()[3].value === "10" &&
+      formInputs()[4].value === "20" &&
+      formInputs()[5].value === "测试新增"
+  );
+  act(() => {
+    setValue(formInputs()[0], "29");
+    setValue(formInputs()[5], "已编辑");
+  });
+  submitForm();
+  const edited = storedRecords().find((r) => r.id === editTarget.id)!;
+  check("保存后写回同一条记录", edited.temperature === 29 && edited.note === "已编辑" && storedRecords().length === 4);
+  check("记录时间和 id 保持不变", edited.createdAt === editTarget.createdAt && edited.id === editTarget.id);
+  check("列表同步显示修改", (cards()[0].textContent || "").includes("水温 29") && bodyText().includes("已编辑"));
+  check("保存后退出编辑模式", submitButton().textContent === "保存记录" && bodyText().includes("新增记录"));
+  check("超限提醒同步更新（29°C 超限）", bodyText().includes("水温 29°C 超过上限 28°C"));
+  clickButton("水温");
+  check("趋势同步标出异常点", document.querySelectorAll("circle.trend-point.abnormal").length === 1);
+
+  console.log("\n[13] 取消不写入");
+  clickCardButton("已编辑", ".edit-btn");
+  check("再次进入编辑模式", bodyText().includes("编辑记录"));
+  act(() => {
+    setValue(formInputs()[0], "15");
+    setValue(formInputs()[5], "不应保存");
+  });
+  clickButton("取消");
+  check("取消后回到新增模式", bodyText().includes("新增记录") && submitButton().textContent === "保存记录");
+  check("取消后表单清空", formInputs()[0].value === "" && formInputs()[5].value === "");
+  check(
+    "取消的修改未写入 localStorage",
+    !JSON.stringify(storedRecords()).includes("不应保存") &&
+      storedRecords().find((r) => r.id === editTarget.id)!.temperature === 29
+  );
+  check("列表未受取消影响", cards().length === 4 && !bodyText().includes("不应保存"));
+
+  console.log("\n[14] 编辑联动筛选和趋势");
+  clickCardButton("草缸", ".edit-btn");
+  act(() => {
+    setValue(formSelect(), "三湖缸");
+  });
+  submitForm();
+  check(
+    "缸型修改已写入存储",
+    storedRecords().filter((r) => r.tankType === "三湖缸").length === 1 &&
+      storedRecords().filter((r) => r.tankType === "草缸").length === 0
+  );
+  check("全部筛选下仍是 4 条", cards().length === 4);
+  check("趋势总点数仍为 4", document.querySelectorAll("circle.trend-point").length === 4);
+  clickButton("草缸");
+  check("草缸筛选下列表为空", cards().length === 0 && bodyText().includes("当前筛选下暂无记录"));
+  check("草缸筛选下趋势为空状态", bodyText().includes("无法绘制趋势"));
+  check(
+    "草缸筛选下导出禁用",
+    (Array.from(document.querySelectorAll("button")).find((b) => (b.textContent || "").includes("导出")) as HTMLButtonElement)
+      .disabled
+  );
+  clickButton("三湖缸");
+  check("三湖缸筛选出改过来的记录", cards().length === 1 && (cards()[0].textContent || "").includes("三湖缸"));
+  check("趋势跟随显示 1 个点", document.querySelectorAll("circle.trend-point").length === 1);
+  clickButton("全部");
+  check("恢复全部后 4 条", cards().length === 4);
+
+  console.log("\n[15] 刷新后编辑结果保留");
+  act(() => root.unmount());
+  const container4 = document.createElement("div");
+  document.body.appendChild(container4);
+  root = createRoot(container4);
+  act(() => {
+    root.render(<App />);
+  });
+  check("刷新后仍是 4 条", cards().length === 4);
+  check("刷新后指标修改保留", bodyText().includes("已编辑") && bodyText().includes("水温 29"));
+  check(
+    "刷新后缸型修改保留",
+    storedRecords().some((r) => r.tankType === "三湖缸") && !storedRecords().some((r) => r.tankType === "草缸")
+  );
+  check("刷新后趋势正常渲染", document.querySelectorAll("circle.trend-point").length === 4);
+  check("刷新后表单处于新增模式", bodyText().includes("新增记录") && submitButton().textContent === "保存记录");
 
   act(() => root.unmount());
 
