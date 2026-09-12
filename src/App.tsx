@@ -2,17 +2,25 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import "./styles.css";
 import {
   ALL_FILTER,
+  FILTER_PREF_KEY,
   LIMITS,
+  METRIC_LABELS,
   TANK_TYPES,
+  TREND_METRICS,
+  TREND_METRIC_PREF_KEY,
   TankRecord,
+  TrendMetric,
   checkRecord,
   collectViolations,
   createId,
   formatTime,
+  loadPref,
   loadRecords,
+  savePref,
   saveRecords,
   toCSV,
 } from "./ledger";
+import TrendChart from "./TrendChart";
 
 const project = {
   id: "hxwl-05",
@@ -84,9 +92,22 @@ function buildMetrics(records: TankRecord[]): Metric[] {
   ];
 }
 
+function loadFilterPref(): string {
+  const saved = loadPref(FILTER_PREF_KEY, ALL_FILTER);
+  return saved === ALL_FILTER || (TANK_TYPES as readonly string[]).includes(saved)
+    ? saved
+    : ALL_FILTER;
+}
+
+function loadTrendMetricPref(): TrendMetric {
+  const saved = loadPref(TREND_METRIC_PREF_KEY, "temperature");
+  return (TREND_METRICS as readonly string[]).includes(saved) ? (saved as TrendMetric) : "temperature";
+}
+
 function App() {
   const [records, setRecords] = useState<TankRecord[]>(loadRecords);
-  const [filter, setFilter] = useState<string>(ALL_FILTER);
+  const [filter, setFilter] = useState<string>(loadFilterPref);
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>(loadTrendMetricPref);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState("");
 
@@ -94,6 +115,15 @@ function App() {
   useEffect(() => {
     saveRecords(records);
   }, [records]);
+
+  // 筛选条件和趋势指标同样持久化，刷新后保持
+  useEffect(() => {
+    savePref(FILTER_PREF_KEY, filter);
+  }, [filter]);
+
+  useEffect(() => {
+    savePref(TREND_METRIC_PREF_KEY, trendMetric);
+  }, [trendMetric]);
 
   const filteredRecords = useMemo(
     () => (filter === ALL_FILTER ? records : records.filter((r) => r.tankType === filter)),
@@ -200,6 +230,27 @@ function App() {
           </ul>
         </section>
       )}
+
+      <section className="panel trend-panel">
+        <div className="section-heading">
+          <div>
+            <p>趋势视图 · {filter === ALL_FILTER ? "全部缸型" : filter}</p>
+            <h2>{METRIC_LABELS[trendMetric]}变化曲线</h2>
+          </div>
+          <div className="chips muted metric-tabs">
+            {TREND_METRICS.map((metric) => (
+              <button
+                key={metric}
+                className={trendMetric === metric ? "filter-active" : ""}
+                onClick={() => setTrendMetric(metric)}
+              >
+                {METRIC_LABELS[metric]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <TrendChart records={filteredRecords} metric={trendMetric} />
+      </section>
 
       <section className="workspace">
         <aside className="panel narrow">

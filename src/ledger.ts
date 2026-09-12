@@ -17,6 +17,19 @@ export const TANK_TYPES = ["草缸", "海缸", "三湖缸", "繁殖缸"] as cons
 export const ALL_FILTER = "全部";
 
 export const STORAGE_KEY = "aquarium-ledger-records-v1";
+export const FILTER_PREF_KEY = "aquarium-ledger-filter";
+export const TREND_METRIC_PREF_KEY = "aquarium-ledger-trend-metric";
+
+/** 趋势视图可切换的指标，与 LIMITS 的键一一对应 */
+export const TREND_METRICS = ["temperature", "ph", "ammonia", "nitrate"] as const;
+export type TrendMetric = (typeof TREND_METRICS)[number];
+
+export const METRIC_LABELS: Record<TrendMetric, string> = {
+  temperature: "水温",
+  ph: "pH",
+  ammonia: "氨氮",
+  nitrate: "硝酸盐",
+};
 
 interface RangeLimit {
   label: string;
@@ -71,6 +84,19 @@ export function checkRecord(r: TankRecord): Violation[] {
 export interface RecordWithViolations {
   record: TankRecord;
   violations: Violation[];
+}
+
+/** 取记录的某项指标值 */
+export function metricValue(r: TankRecord, metric: TrendMetric): number {
+  return r[metric];
+}
+
+/** 单项指标是否超限 */
+export function isMetricAbnormal(value: number, metric: TrendMetric): boolean {
+  const limit = LIMITS[metric];
+  if (limit.min !== undefined && value < limit.min) return true;
+  if (limit.max !== undefined && value > limit.max) return true;
+  return false;
 }
 
 /** 汇总一组记录中的超限情况（按记录倒序） */
@@ -161,6 +187,24 @@ export function saveRecords(records: TankRecord[]): void {
   }
 }
 
+/** 读取界面偏好（筛选条件、趋势指标等），刷新后保留 */
+export function loadPref(key: string, fallback: string): string {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+export function savePref(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // 同上，静默失败
+  }
+}
+
 export function createId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -173,6 +217,14 @@ export function formatTime(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** 趋势图横轴用的短时间格式 */
+export function formatTimeShort(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function csvCell(value: unknown): string {

@@ -152,7 +152,52 @@ async function main() {
   csv = capturedBlob ? await capturedBlob.text() : "";
   check("全部导出为 5 条数据+表头", csv.trim().split("\r\n").length === 6, `实际 ${csv.trim().split("\r\n").length} 行`);
 
-  console.log("\n[7] 删除记录");
+  console.log("\n[7] 趋势视图渲染");
+  check("趋势图 SVG 渲染", document.querySelector("svg.trend-chart") !== null);
+  check("默认指标为水温", document.querySelector(".metric-tabs button.filter-active")?.textContent === "水温");
+  check("标题为水温变化曲线", bodyText().includes("水温变化曲线"));
+  check("曲线点数量等于当前记录数 5", document.querySelectorAll("circle.trend-point").length === 5);
+  check("海缸 2 条记录连成 1 条折线", document.querySelectorAll("polyline.trend-line").length === 1);
+  check("图例覆盖 4 种缸型", document.querySelectorAll(".trend-legend .legend-item").length === 4);
+  check("水温上下限 2 条阈值线", document.querySelectorAll("line.limit-line").length === 2);
+
+  console.log("\n[8] 指标切换与异常点");
+  clickButton("氨氮");
+  check("切换到氨氮 tab", document.querySelector(".metric-tabs button.filter-active")?.textContent === "氨氮");
+  check("标题变为氨氮变化曲线", bodyText().includes("氨氮变化曲线"));
+  check("氨氮异常点 1 个（繁殖缸 0.5ppm）", document.querySelectorAll("circle.trend-point.abnormal").length === 1);
+  check("氨氮只有上限 1 条阈值线", document.querySelectorAll("line.limit-line").length === 1);
+  clickButton("水温");
+  check("水温异常点 1 个（三湖缸 32°C）", document.querySelectorAll("circle.trend-point.abnormal").length === 1);
+
+  console.log("\n[9] 筛选联动趋势");
+  clickButton("草缸");
+  check("筛选草缸后趋势只剩 1 个点", document.querySelectorAll("circle.trend-point").length === 1);
+  check("图例只剩草缸", document.querySelectorAll(".trend-legend .legend-item").length === 1);
+  check("单点无折线", document.querySelectorAll("polyline.trend-line").length === 0);
+  clickButton("海缸");
+  check("筛选海缸后趋势 2 个点 1 条折线", document.querySelectorAll("circle.trend-point").length === 2 && document.querySelectorAll("polyline.trend-line").length === 1);
+  clickButton("全部");
+  check("回到全部后趋势 5 个点", document.querySelectorAll("circle.trend-point").length === 5);
+
+  console.log("\n[10] 刷新后保留趋势设置");
+  clickButton("氨氮");
+  clickButton("海缸");
+  act(() => root.unmount());
+  const container3 = document.createElement("div");
+  document.body.appendChild(container3);
+  root = createRoot(container3);
+  act(() => {
+    root.render(<App />);
+  });
+  check("刷新后趋势指标仍是氨氮", document.querySelector(".metric-tabs button.filter-active")?.textContent === "氨氮");
+  check("刷新后筛选仍是海缸", Array.from(document.querySelectorAll(".chips.muted button.filter-active")).some((b) => (b.textContent || "").includes("海缸")));
+  check("刷新后趋势跟随筛选（海缸 2 个点）", document.querySelectorAll("circle.trend-point").length === 2);
+  check("刷新后记录列表跟随筛选（2 条）", cards().length === 2);
+  clickButton("全部");
+  check("恢复全部后 5 条", cards().length === 5);
+
+  console.log("\n[11] 删除记录");
   const before = cards().length;
   const deleteBtn = cards()[0].querySelector(".delete-btn")!;
   act(() => {

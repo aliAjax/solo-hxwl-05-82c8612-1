@@ -329,6 +329,80 @@ button:disabled {
   margin: 0;
 }
 
+.trend-panel {
+  margin-bottom: 20px;
+}
+
+.metric-tabs {
+  margin-bottom: 0;
+}
+
+.trend-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.trend-chart .grid-line {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.trend-chart .tick {
+  fill: #94a3b8;
+  font-size: 11px;
+}
+
+.trend-chart .limit-line {
+  stroke: #e11d48;
+  stroke-width: 1.2;
+  stroke-dasharray: 5 4;
+  opacity: 0.65;
+}
+
+.trend-chart .limit-label {
+  fill: #e11d48;
+  font-size: 11px;
+}
+
+.trend-point {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.trend-point.abnormal {
+  stroke: #7f1d1d;
+}
+
+.trend-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #526070;
+  font-size: 13px;
+}
+
+.legend-item i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.legend-hint {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .record-list {
   display: grid;
   gap: 12px;
